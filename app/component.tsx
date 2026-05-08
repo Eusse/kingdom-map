@@ -1,15 +1,8 @@
 "use client";
 
-import { PolygonLayer } from "@deck.gl/layers";
+import { GeoJsonLayer } from "@deck.gl/layers";
 import { GoogleMapsOverlay } from "@deck.gl/google-maps";
 import { APIProvider, Map, MapProps } from "@vis.gl/react-google-maps";
-
-type ZipCode = {
-  zipcode: number;
-  population: number;
-  area: number;
-  contour: [number, number][];
-};
 
 export default function MapComponent({
   initialZoom,
@@ -21,16 +14,19 @@ export default function MapComponent({
   const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const GOOGLE_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID;
 
-  const layer = new PolygonLayer<ZipCode>({
-    id: "PolygonLayer",
-    data: "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-zipcodes.json",
-    getPolygon: (d: ZipCode) => d.contour,
-    getElevation: (d: ZipCode) => d.population / d.area / 10,
-    getFillColor: (d: ZipCode) => [d.population / d.area / 60, 140, 0],
+  const geoJsonLayer = new GeoJsonLayer({
+    id: "colombia-departments",
+    data: "/api/location",
+    filled: true,
+    stroked: true,
+    getFillColor: [100, 150, 255, 100],
     getLineColor: [255, 255, 255],
-    getLineWidth: 20,
+    getLineWidth: 2000,
     lineWidthMinPixels: 1,
-    pickable: false,
+    pickable: true,
+    autoHighlight: true,
+    onClick: (info) =>
+      console.log("Clicked:", info.object.properties.NOMBRE_DPT),
   });
 
   return (
@@ -41,7 +37,7 @@ export default function MapComponent({
           defaultZoom={initialZoom}
           mapId={GOOGLE_MAP_ID || ""}
           onLoad={(map: MapProps) => {
-            new GoogleMapsOverlay({ layers: [layer] }).setMap(map);
+            new GoogleMapsOverlay({ layers: [geoJsonLayer] }).setMap(map);
           }}
         />
       </APIProvider>
