@@ -1,25 +1,59 @@
-export async function GET(request: Request) {
-  console.log(request);
-  const data = await fetch(
-    "https://legacysoftware.online/services_v2/public_harvest_integrations/pastoresData.php",
-  );
-  const locations = await data.json();
-  return new Response(JSON.stringify(locations), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+import { NextResponse } from "next/server";
+import { promises as fs } from "fs";
+import path from "path";
+import * as turf from "@turf/turf";
 
-export async function POST(request: Request) {
-  // Parse the request body
-  const body = await request.json();
-  const { name } = body;
+export async function GET() {
+  try {
+    // 1. Load your Department GeoJSON
+    const geoPath = path.join(process.cwd(), "data", "colombia.geo.json");
+    const geoContent = await fs.readFile(geoPath, "utf8");
+    const departmentsGeoJSON = JSON.parse(geoContent);
 
-  // e.g. Insert new user into your DB
-  const newUser = { id: Date.now(), name };
+    // 2. Fetch the users
+    const data = await fetch(
+      "https://legacysoftware.online/services_v2/public_harvest_integrations/pastoresData.php",
+    );
+    const users = await data.json();
 
-  return new Response(JSON.stringify(newUser), {
-    status: 201,
-    headers: { "Content-Type": "application/json" },
-  });
+    // 3. Match users to departments
+    const enrichedUsers = users.map((user: any) => {
+      // Ensure coordinates exist and are treated as numbers
+      const lng = parseFloat(user.M_DIR_LON);
+      const lat = parseFloat(user.M_DIR_LAT);
+
+      // If coordinates are missing or invalid (NaN), skip Turf check
+      if (isNaN(lng) || isNaN(lat)) {
+        return { ...user, department: "Invalid Coordinates" };
+      }
+
+      try {
+        const point = turf.point([lng, lat]);
+        let departmentName = "Unknown";
+
+        for (const feature of departmentsGeoJSON.features) {
+          if (turf.booleanPointInPolygon(point, feature)) {
+            departmentName = feature.properties.NOMBRE_DPT;
+            break;
+          }
+        }
+        return { ...user, department: departmentName };
+      } catch (err) {
+        // Catch specific Turf errors for weird geometries
+        return { ...user, department: "Error calculating" };
+      }
+    });
+
+    return NextResponse.json(enrichedUsers);
+  } catch (error: any) {
+    console.error("DETAILED ERROR:", error);
+    return NextResponse.json(
+      {
+        error: "Spatial check failed",
+        details: error.message, // This will tell us if it's a fetch error or a turf error
+        stack: error.stack,
+      },
+      { status: 500 },
+    );
+  }
 }

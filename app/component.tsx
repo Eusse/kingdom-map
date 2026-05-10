@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { GeoJsonLayer } from "@deck.gl/layers";
+import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { GoogleMapsOverlay } from "@deck.gl/google-maps";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
+
+import { Feature, Geometry } from "geojson";
 
 declare global {
   interface Window {
     google: any;
   }
 }
+
+type LocationProperties = {
+  NOMBRE_DPT: string;
+};
 
 function DeckGLOverlay() {
   const map = useMap();
@@ -24,7 +30,7 @@ function DeckGLOverlay() {
 
   const layers = useMemo(
     () => [
-      new GeoJsonLayer({
+      new GeoJsonLayer<LocationProperties>({
         id: "colombia-departments",
         data: "/api/location",
         filled: true,
@@ -32,8 +38,25 @@ function DeckGLOverlay() {
         getFillColor: [100, 150, 255, 150],
         getLineColor: [255, 255, 255],
         getLineWidth: 2000,
+        getText: (f: Feature<Geometry, LocationProperties>) =>
+          f.properties.NOMBRE_DPT,
+        getTextColor: [255, 255, 255],
         lineWidthMinPixels: 1,
         pickable: true,
+        onClick: (info) =>
+          console.log(`${info.object.properties.NOMBRE_DPT} clicked`),
+      }),
+      new ScatterplotLayer({
+        id: "user-points",
+        data: "/api/users",
+        getPosition: (d) => [d.M_DIR_LON, d.M_DIR_LAT],
+        getFillColor: [255, 0, 0],
+        getRadius: 100,
+        radiusMinPixels: 5,
+        pickable: true,
+        onHover: (info) =>
+          info.object &&
+          console.log(`${info.object.M_NAME} is in ${info.object.department}`),
       }),
     ],
     [],
