@@ -5,7 +5,7 @@ import path from "path";
 export async function GET() {
   try {
     // Get the path of the JSON file.
-    const filePath = path.join(process.cwd(), "data", "bart.geo.json");
+    const filePath = path.join(process.cwd(), "data", "colombia.geo.json");
     // Read the file content
     const fileContent = await fs.readFile(filePath, "utf8");
     // Parse and return the data
