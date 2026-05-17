@@ -14,8 +14,16 @@ export async function GET() {
     const data = await fetch(
       "https://legacysoftware.online/services_v2/public_harvest_integrations/pastoresData.php",
     );
+    if (!data.ok) {
+      return NextResponse.json(
+        {
+          error: "service_unavailable",
+          message: "External user database is offline.",
+        },
+        { status: 503 }, // 503 Service Unavailable
+      );
+    }
     const users = await data.json();
-
     // 3. Match users to departments
     const enrichedUsers = users.map((user: any) => {
       // Ensure coordinates exist and are treated as numbers
@@ -38,12 +46,17 @@ export async function GET() {
           }
         }
         return { ...user, department: departmentName };
-      } catch (err) {
-        // Catch specific Turf errors for weird geometries
-        return { ...user, department: "Error calculating" };
+      } catch (error) {
+        console.error(error);
+        return NextResponse.json(
+          {
+            error: "service_unavailable",
+            message: "Failed to connect to user service.",
+          },
+          { status: 503 },
+        );
       }
     });
-
     return NextResponse.json(enrichedUsers);
   } catch (error: any) {
     console.error("DETAILED ERROR:", error);
