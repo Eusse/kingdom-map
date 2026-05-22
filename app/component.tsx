@@ -23,12 +23,33 @@ interface DeckGLOverlayProps {
   setSelectedDept: (dept: ColombiaDeptProperties | null) => void;
   setIsDrawerOpen: (open: boolean) => void;
   setServiceError: (error: string | null) => void;
+  departmentCounts: Record<string, number>;
+  maxCount: number;
+  usersData: any[];
+}
+
+function getFeedbackColor(count: number, maxCount: number) {
+  // If there are no users at all across the map, default everyone to red
+  if (maxCount === 0) return [239, 68, 68, 150]; // [R, G, B, Alpha]
+
+  // Calculate percentage (0.0 to 1.0)
+  const ratio = count / maxCount;
+
+  // Linear interpolation between Red [239, 68, 68] and Green [34, 197, 94]
+  const r = Math.round(239 + (34 - 239) * ratio);
+  const g = Math.round(68 + (197 - 68) * ratio);
+  const b = Math.round(68 + (94 - 68) * ratio);
+
+  return [r, g, b, 160]; // 160 alpha out of 255 for transparency
 }
 
 function DeckGLOverlay({
   setSelectedDept,
   setIsDrawerOpen,
   setServiceError,
+  departmentCounts,
+  maxCount,
+  usersData,
 }: DeckGLOverlayProps) {
   const map = useMap();
 
@@ -47,7 +68,6 @@ function DeckGLOverlay({
         data: "/api/location",
         filled: true,
         stroked: true,
-        getFillColor: [100, 150, 255, 150],
         getLineColor: [255, 255, 255],
         getLineWidth: 2000,
         getText: (f: Feature<Geometry, ColombiaDeptProperties>) =>
@@ -55,23 +75,35 @@ function DeckGLOverlay({
         getTextColor: [255, 255, 255],
         lineWidthMinPixels: 1,
         pickable: true,
+        getFillColor: (feature: any) => {
+          const deptName = feature.properties.NOMBRE_DPT;
+          const count = departmentCounts[deptName] || 0;
+          return getFeedbackColor(count, maxCount);
+        },
+        updateTriggers: {
+          getFillColor: [departmentCounts, maxCount],
+        },
         onClick: (info) => {
           if (info.object) {
-            setSelectedDept(info.object.properties);
+            const deptName = info.object.properties.NOMBRE_DPT;
+            // Enrich the side drawer state with the real-time count
+            setSelectedDept({
+              ...info.object.properties,
+              userCount: departmentCounts[deptName] || 0,
+            });
             setIsDrawerOpen(true);
           }
         },
       }),
       new ScatterplotLayer({
         id: "user-points",
-        data: "/api/users",
+        data: usersData,
         getPosition: (d) => [d.M_DIR_LON, d.M_DIR_LAT],
         getFillColor: [255, 0, 0],
         getRadius: 100,
         radiusMinPixels: 5,
         pickable: true,
         onError: (error: Error) => {
-          console.error("Scatterplot load failure:", error);
           setServiceError(
             "El servicio de usuarios no esta disponible en este momento. Por favor intenta de nuevo mas tarde.",
           );
@@ -84,7 +116,14 @@ function DeckGLOverlay({
           console.log(`${info.object.M_NAME} is in ${info.object.department}`),
       }),
     ],
-    [setSelectedDept, setIsDrawerOpen, setServiceError],
+    [
+      departmentCounts,
+      maxCount,
+      usersData,
+      setSelectedDept,
+      setIsDrawerOpen,
+      setServiceError,
+    ],
   );
 
   useEffect(() => {
@@ -128,10 +167,45 @@ export default function MapComponent({
   initialZoom: number;
   initialCenter: { lat: number; lng: number };
 }) {
+  const [users, setUsers] = useState<any[]>([]);
   const [selectedDept, setSelectedDept] =
     useState<ColombiaDeptProperties | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [serviceError, setServiceError] = useState<string | null>(null);
+
+  // 1. Fetch user data manually on mount
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const res = await fetch("/api/users");
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setUsers(data);
+      } catch {
+        setServiceError("Could not load user distribution statistics.");
+      }
+    }
+    loadUsers();
+  }, []);
+
+  // 2. Generate a map of { "BOGOTA": 45, "ANTIOQUIA": 12 } and find the maximum
+  const { departmentCounts, maxCount } = useMemo(() => {
+    const counts: Record<string, number> = {};
+    let max = 0;
+
+    users.forEach((user) => {
+      if (
+        user.department &&
+        user.department !== "Unknown" &&
+        user.department !== "Invalid Coordinates"
+      ) {
+        counts[user.department] = (counts[user.department] || 0) + 1;
+        if (counts[user.department] > max) max = counts[user.department];
+      }
+    });
+
+    return { departmentCounts: counts, maxCount: max };
+  }, [users]);
 
   return (
     <div id="map-container">
@@ -146,6 +220,9 @@ export default function MapComponent({
             setSelectedDept={setSelectedDept}
             setIsDrawerOpen={setIsDrawerOpen}
             setServiceError={setServiceError}
+            departmentCounts={departmentCounts}
+            maxCount={maxCount}
+            usersData={users}
           />
         </Map>
       </APIProvider>

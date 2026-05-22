@@ -12,7 +12,7 @@ export async function GET() {
 
     // 2. Fetch the users
     const data = await fetch(
-      "https://legacysoftware.online/services_v2/public_harvest_integrations/pastoresData.php",
+      "https://api.legacysoftware.online/integrations/pastoresGeoData.php",
     );
     if (!data.ok) {
       return NextResponse.json(
