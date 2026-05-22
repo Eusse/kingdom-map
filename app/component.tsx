@@ -5,6 +5,7 @@ import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { GoogleMapsOverlay } from "@deck.gl/google-maps";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import { Feature, Geometry } from "geojson";
+import { Drawer } from "./components/drawer";
 
 declare global {
   interface Window {
@@ -29,12 +30,15 @@ interface DeckGLOverlayProps {
 }
 
 function getFeedbackColor(count: number, maxCount: number) {
-  // If there are no users at all across the map, default everyone to red
-  if (maxCount === 0) return [239, 68, 68, 150]; // [R, G, B, Alpha]
-
-  // Calculate percentage (0.0 to 1.0)
-  const ratio = count / maxCount;
-
+  // 1. If there are exactly zero users, paint the department a clean slate gray
+  if (count === 0) {
+    return [148, 163, 184, 120]; // Tailwind slate-400 with ~45% opacity
+  }
+  // 2. If maxCount is somehow 0 but count isn't, fallback safety
+  if (maxCount === 0) return [239, 68, 68, 160];
+  // 3. Calculate percentage (0.0 to 1.0)
+  // To make the gradient pop, we normalize it starting from 1 user up to maxCount
+  const ratio = maxCount === 1 ? 1 : (count - 1) / (maxCount - 1);
   // Linear interpolation between Red [239, 68, 68] and Green [34, 197, 94]
   const r = Math.round(239 + (34 - 239) * ratio);
   const g = Math.round(68 + (197 - 68) * ratio);
@@ -173,6 +177,11 @@ export default function MapComponent({
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [serviceError, setServiceError] = useState<string | null>(null);
 
+  const usersInSelectedDept = useMemo(() => {
+    if (!selectedDept) return [];
+    return users.filter((user) => user.department === selectedDept.NOMBRE_DPT);
+  }, [users, selectedDept]);
+
   // 1. Fetch user data manually on mount
   useEffect(() => {
     async function loadUsers() {
@@ -256,38 +265,12 @@ export default function MapComponent({
       </div>
 
       {/* 3. Sliding Drawer (Right Side) */}
-      <div
-        className={`absolute top-0 right-0 h-full w-80 bg-white shadow-2xl z-20 transition-transform duration-300 transform ${isDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        {selectedDept && (
-          <div className="p-6">
-            <button
-              onClick={() => setIsDrawerOpen(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-black"
-            >
-              ✕
-            </button>
-
-            <h2 className="text-2xl font-bold text-blue-800 mb-4">
-              {selectedDept.NOMBRE_DPT}
-            </h2>
-
-            <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-600 uppercase font-semibold">
-                  Metricas generales
-                </p>
-                <p className="text-xl font-mono">
-                  {selectedDept.DPTO || "N/A"}
-                </p>
-              </div>
-
-              {/* You can filter your user list here to show count for THIS department */}
-              <p className="text-gray-700">Espacio para metricas detalladas.</p>
-            </div>
-          </div>
-        )}
-      </div>
+      <Drawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        department={selectedDept}
+        departmentUsers={usersInSelectedDept}
+      />
     </div>
   );
 }
