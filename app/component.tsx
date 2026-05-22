@@ -198,30 +198,57 @@ export default function MapComponent({
   }, []);
 
   // 2. Generate a map of { "BOGOTA": 45, "ANTIOQUIA": 12 } and find the maximum
-  const { departmentCounts, maxCount } = useMemo(() => {
+  const { departmentCounts, maxCount, internationalCount } = useMemo(() => {
     const counts: Record<string, number> = {};
     let max = 0;
+    let international = 0;
 
     users.forEach((user) => {
-      if (
+      if (user.department === "International") {
+        international++;
+      } else if (
         user.department &&
         user.department !== "Unknown" &&
         user.department !== "Invalid Coordinates"
       ) {
         counts[user.department] = (counts[user.department] || 0) + 1;
+
+        // Keep tracking local max for the choropleth map scaling
         if (counts[user.department] > max) max = counts[user.department];
       }
     });
 
-    return { departmentCounts: counts, maxCount: max };
+    return {
+      departmentCounts: counts,
+      maxCount: max,
+      internationalCount: international,
+    };
   }, [users]);
 
-  // Transform object to a sorted array for the dashboard list
+  // Inject international group into your leaderboard list array
   const sortedStats = useMemo(() => {
-    return Object.entries(departmentCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count); // Heaviest density at the top
-  }, [departmentCounts]);
+    const localStats = Object.entries(departmentCounts).map(
+      ([name, count]) => ({
+        name,
+        count,
+        isInternational: false,
+      }),
+    );
+
+    // Sort local departments first
+    localStats.sort((a, b) => b.count - a.count);
+
+    // Append international item to the very bottom if there are any users found there
+    if (internationalCount > 0) {
+      localStats.push({
+        name: "Fuera de Colombia 🌐",
+        count: internationalCount,
+        isInternational: true,
+      });
+    }
+
+    return localStats;
+  }, [departmentCounts, internationalCount]);
 
   return (
     <div id="map-container">

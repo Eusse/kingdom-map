@@ -26,35 +26,26 @@ export async function GET() {
     const users = await data.json();
     // 3. Match users to departments
     const enrichedUsers = users.map((user: any) => {
-      // Ensure coordinates exist and are treated as numbers
-      const lng = parseFloat(user.M_DIR_LON);
-      const lat = parseFloat(user.M_DIR_LAT);
-
-      // If coordinates are missing or invalid (NaN), skip Turf check
-      if (isNaN(lng) || isNaN(lat)) {
-        return { ...user, department: "Invalid Coordinates" };
-      }
-
       try {
+        const lng = parseFloat(user.M_DIR_LON);
+        const lat = parseFloat(user.M_DIR_LAT);
+        if (isNaN(lng) || isNaN(lat))
+          return { ...user, department: "Invalid Coordinates" };
+
         const point = turf.point([lng, lat]);
-        let departmentName = "Unknown";
+        let deptName = null;
 
         for (const feature of departmentsGeoJSON.features) {
           if (turf.booleanPointInPolygon(point, feature)) {
-            departmentName = feature.properties.NOMBRE_DPT;
+            deptName = feature.properties.NOMBRE_DPT;
             break;
           }
         }
-        return { ...user, department: departmentName };
-      } catch (error) {
-        console.error(error);
-        return NextResponse.json(
-          {
-            error: "service_unavailable",
-            message: "Failed to connect to user service.",
-          },
-          { status: 503 },
-        );
+
+        // 🌟 Capture anyone whose point didn't land in a local polygon shape
+        return { ...user, department: deptName || "International" };
+      } catch (err) {
+        return { ...user, department: "Invalid Coordinates" };
       }
     });
     return NextResponse.json(enrichedUsers);
