@@ -5,6 +5,14 @@ interface DrawerProps {
   departmentUsers: any[];
 }
 
+function capitalizeName(name: string): string {
+  return name
+    .toLowerCase() // Ensure other letters are lowercase
+    .split(" ") // Split into words
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each
+    .join(" "); // Join back into a single string
+}
+
 export function Drawer({
   isOpen,
   onClose,
@@ -29,7 +37,10 @@ export function Drawer({
 
         <div className="mt-2 flex items-center space-x-2">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-            {departmentUsers.length} Usuarios Activos
+            {departmentUsers.length}
+            {departmentUsers.length === 1
+              ? " Usuario Activo"
+              : " Usuarios Activos"}
           </span>
           <span className="text-xs text-slate-400 font-mono">
             ID: {department.DPTO || "N/A"}
@@ -56,10 +67,11 @@ export function Drawer({
                 <div>
                   {/* Adjust properties based on your real PHP endpoint naming scheme */}
                   <h4 className="font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
-                    {user.M_NAME || `User #${user.id}`}
+                    {capitalizeName(user.M_NAME) || `User #${user.id}`}
                   </h4>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {user.M_REFERRED_NAME || "No contact email provided"}
+                    {capitalizeName(user.M_REFERRED_NAME) ||
+                      "No contact email provided"}
                   </p>
                 </div>
 
