@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import * as turf from "@turf/turf";
+import { User } from "../../types";
 
 export async function GET() {
   try {
@@ -23,9 +24,9 @@ export async function GET() {
         { status: 503 }, // 503 Service Unavailable
       );
     }
-    const users = await data.json();
+    const users = (await data.json()) as User[];
     // 3. Match users to departments
-    const enrichedUsers = users.map((user: any) => {
+    const enrichedUsers = users.map((user: User) => {
       try {
         const lng = parseFloat(user.M_DIR_LON);
         const lat = parseFloat(user.M_DIR_LAT);
@@ -44,18 +45,20 @@ export async function GET() {
 
         // 🌟 Capture anyone whose point didn't land in a local polygon shape
         return { ...user, department: deptName || "International" };
-      } catch (err) {
+      } catch {
         return { ...user, department: "Invalid Coordinates" };
       }
     });
     return NextResponse.json(enrichedUsers);
-  } catch (error: any) {
+  } catch (error) {
     console.error("DETAILED ERROR:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
       {
         error: "Spatial check failed",
-        details: error.message, // This will tell us if it's a fetch error or a turf error
-        stack: error.stack,
+        details: errorMessage, // This will tell us if it's a fetch error or a turf error
+        stack: errorStack,
       },
       { status: 500 },
     );

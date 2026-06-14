@@ -6,18 +6,12 @@ import { GoogleMapsOverlay } from "@deck.gl/google-maps";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import { Feature, Geometry } from "geojson";
 import { Drawer } from "./components/drawer";
+import { ColombiaDeptProperties, User } from "./types";
 
 declare global {
   interface Window {
-    google: any;
+    google: typeof google;
   }
-}
-
-// Define the shape of a Colombia Department based on your GeoJSON properties
-interface ColombiaDeptProperties {
-  NOMBRE_DPT: string;
-  DPTO?: string; // Department code
-  [key: string]: any; // Allows for other properties without error
 }
 
 interface DeckGLOverlayProps {
@@ -26,10 +20,10 @@ interface DeckGLOverlayProps {
   setServiceError: (error: string | null) => void;
   departmentCounts: Record<string, number>;
   maxCount: number;
-  usersData: any[];
+  usersData: User[];
 }
 
-function getFeedbackColor(count: number, maxCount: number) {
+function getFeedbackColor(count: number, maxCount: number): [number, number, number, number] {
   // 1. If there are exactly zero users, paint the department a clean slate gray
   if (count === 0) {
     return [148, 163, 184, 120]; // Tailwind slate-400 with ~45% opacity
@@ -79,7 +73,7 @@ function DeckGLOverlay({
         getTextColor: [255, 255, 255],
         lineWidthMinPixels: 1,
         pickable: true,
-        getFillColor: (feature: any) => {
+        getFillColor: (feature: Feature<Geometry, ColombiaDeptProperties>) => {
           const deptName = feature.properties.NOMBRE_DPT;
           const count = departmentCounts[deptName] || 0;
           return getFeedbackColor(count, maxCount);
@@ -107,7 +101,7 @@ function DeckGLOverlay({
         getRadius: 100,
         radiusMinPixels: 5,
         pickable: true,
-        onError: (error: Error) => {
+        onError: () => {
           setServiceError(
             "El servicio de usuarios no esta disponible en este momento. Por favor intenta de nuevo mas tarde.",
           );
@@ -171,7 +165,7 @@ export default function MapComponent({
   initialZoom: number;
   initialCenter: { lat: number; lng: number };
 }) {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedDept, setSelectedDept] =
     useState<ColombiaDeptProperties | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -269,6 +263,27 @@ export default function MapComponent({
           />
         </Map>
       </APIProvider>
+
+      {/* Error alert toast */}
+      {serviceError && (
+        <div className="absolute top-4 right-4 z-50 max-w-sm bg-red-50/95 border border-red-200 text-red-800 p-4 rounded-xl shadow-2xl backdrop-blur-md flex items-start space-x-3">
+          <span className="text-base mt-0.5">⚠️</span>
+          <div className="flex-1">
+            <h4 className="font-bold text-xs text-red-900">
+              Error del Servicio
+            </h4>
+            <p className="text-[11px] font-medium mt-0.5 leading-relaxed">
+              {serviceError}
+            </p>
+          </div>
+          <button
+            onClick={() => setServiceError(null)}
+            className="text-red-400 hover:text-red-600 transition-colors font-bold text-xs p-0.5"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* 2. Floating Live Leaderboard Panel (Pushed down to top-24 to safely clear map toggles) */}
       <div className="absolute top-24 left-4 z-10 w-72 bg-white/95 rounded-xl shadow-2xl border border-slate-100 flex flex-col max-h-[60vh] backdrop-blur-md">

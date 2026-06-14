@@ -1,8 +1,10 @@
+import { ColombiaDeptProperties, User } from "../types";
+
 interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  department: any;
-  departmentUsers: any[];
+  department: ColombiaDeptProperties | null;
+  departmentUsers: User[];
 }
 
 function capitalizeName(name: string): string {
@@ -58,7 +60,7 @@ export function Drawer({
             </p>
           </div>
         ) : (
-          departmentUsers.map((user: any, index: number) => (
+          departmentUsers.map((user, index) => (
             <div
               key={user.id || index}
               className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-slate-200 transition-all group duration-200"
@@ -70,7 +72,7 @@ export function Drawer({
                     {capitalizeName(user.M_NAME) || `User #${user.id}`}
                   </h4>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {capitalizeName(user.M_REFERRED_NAME) ||
+                    {capitalizeName(user.M_REFERRED_NAME || "") ||
                       "No contact email provided"}
                   </p>
                 </div>
