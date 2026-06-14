@@ -7,6 +7,8 @@ import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import { Feature, Geometry } from "geojson";
 import { Drawer } from "./components/drawer";
 import { ColombiaDeptProperties, User } from "./types";
+import { Summary } from "./components/summary";
+import { ErrorToast } from "./components/error-toast";
 
 declare global {
   interface Window {
@@ -270,74 +272,13 @@ export default function MapComponent({
       </APIProvider>
 
       {/* Error alert toast */}
-      {serviceError && (
-        <div className="absolute top-4 right-4 z-50 max-w-sm bg-red-50/95 border border-red-200 text-red-800 p-4 rounded-xl shadow-2xl backdrop-blur-md flex items-start space-x-3">
-          <span className="text-base mt-0.5">⚠️</span>
-          <div className="flex-1">
-            <h4 className="font-bold text-xs text-red-900">
-              Error del Servicio
-            </h4>
-            <p className="text-[11px] font-medium mt-0.5 leading-relaxed">
-              {serviceError}
-            </p>
-          </div>
-          <button
-            onClick={() => setServiceError(null)}
-            className="text-red-400 hover:text-red-600 transition-colors font-bold text-xs p-0.5"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorToast
+        serviceError={serviceError}
+        setServiceError={setServiceError}
+      />
 
       {/* 2. Floating Live Leaderboard Panel (Pushed down to top-24 to safely clear map toggles) */}
-      <div className="absolute top-24 left-4 z-10 w-72 bg-white/95 rounded-xl shadow-2xl border border-slate-100 flex flex-col max-h-[60vh] backdrop-blur-md">
-        {/* Header Block */}
-        <div className="p-4 border-b border-slate-100">
-          <h2 className="font-bold text-slate-800 text-base flex items-center">
-            <span className="mr-2">📊</span> Distribución Regional
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Métricas en tiempo real
-          </p>
-        </div>
-
-        {/* Scrollable Aggregated Statistics List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
-          {sortedStats.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-xs">
-              Buscando información de los pastores...
-            </div>
-          ) : (
-            sortedStats.map((dept, idx) => (
-              <div
-                key={dept.name}
-                className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100/50 hover:bg-slate-100/70 transition-colors"
-              >
-                <div className="flex items-center space-x-2.5 truncate">
-                  {/* Small Index Counter Badge */}
-                  <span className="text-[10px] font-bold text-slate-400 w-4 text-right">
-                    {idx + 1}.
-                  </span>
-                  <span className="text-xs font-semibold text-slate-700 truncate capitalize">
-                    {dept.name.toLowerCase()}
-                  </span>
-                </div>
-
-                {/* Quantitative Data Pill Tag */}
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-blue-50 text-blue-700 border border-blue-100">
-                  {dept.count}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Simple Footnote Info Bar */}
-        <div className="p-2.5 bg-slate-50 border-t border-slate-100 rounded-b-xl text-[10px] text-center text-slate-400 font-medium">
-          Usuarios registrados en total: {users.length}
-        </div>
-      </div>
+      <Summary users={users} sortedStats={sortedStats} />
 
       {/* 3. Sliding Drawer (Right Side) */}
       <Drawer
