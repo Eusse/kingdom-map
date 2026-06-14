@@ -99,7 +99,6 @@ function DeckGLOverlay({
           }
         },
       }),
-      /*
       new ScatterplotLayer({
         id: "user-points",
         data: usersData,
@@ -119,7 +118,7 @@ function DeckGLOverlay({
         onHover: (info) =>
           info.object &&
           console.log(`${info.object.M_NAME} is in ${info.object.department}`),
-      }),*/
+      }),
     ],
     [
       departmentCounts,
