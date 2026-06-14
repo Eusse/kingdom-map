@@ -23,7 +23,10 @@ interface DeckGLOverlayProps {
   usersData: User[];
 }
 
-function getFeedbackColor(count: number, maxCount: number): [number, number, number, number] {
+function getFeedbackColor(
+  count: number,
+  maxCount: number,
+): [number, number, number, number] {
   // 1. If there are exactly zero users, paint the department a clean slate gray
   if (count === 0) {
     return [148, 163, 184, 120]; // Tailwind slate-400 with ~45% opacity
@@ -185,7 +188,9 @@ export default function MapComponent({
         const data = await res.json();
         setUsers(data);
       } catch {
-        setServiceError("Could not load user distribution statistics.");
+        setServiceError(
+          "No se pudo cargar la informacion de los usuarios en este momento. Intenta de nuevo mas tarde.",
+        );
       }
     }
     loadUsers();
