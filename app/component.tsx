@@ -175,6 +175,8 @@ export default function MapComponent({
     useState<ColombiaDeptProperties | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [serviceError, setServiceError] = useState<string | null>(null);
+  const [isDashboardExpanded, setIsDashboardExpanded] =
+    useState<boolean>(false);
 
   const usersInSelectedDept = useMemo(() => {
     if (!selectedDept) return [];
@@ -278,7 +280,12 @@ export default function MapComponent({
       />
 
       {/* 2. Floating Live Leaderboard Panel (Pushed down to top-24 to safely clear map toggles) */}
-      <Summary users={users} sortedStats={sortedStats} />
+      <Summary
+        users={users}
+        sortedStats={sortedStats}
+        isDashboardExpanded={isDashboardExpanded}
+        setIsDashboardExpanded={setIsDashboardExpanded}
+      />
 
       {/* 3. Sliding Drawer (Right Side) */}
       <Drawer
